@@ -12,7 +12,7 @@ exports.yapexil2mefStream = async function (file) {
     for await (const entry of zip) {
         const fileName = entry.path;
         const type = entry.type; // 'Directory' or 'File'
-
+    //Test comment
         if (fileName === "metadata.json"){
             console.log(entry);
         }
