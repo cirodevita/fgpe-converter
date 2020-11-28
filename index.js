@@ -1,8 +1,5 @@
 const unzipper = require("unzipper");
 const fs = require("fs");
-let stream = require('stream');
-const readline = require('readline');
-const etl = require("etl");
 
 let config = require('./config');
 
@@ -10,20 +7,78 @@ exports.yapexil2mef = function(path) {
     let file = fs.createReadStream(path);
     this.yapexil2mefStream(file);
 }
-
+//TODO Write on file!!
 exports.yapexil2mefStream = async function (file) {
     file
         .pipe(unzipper.Parse())
-        .pipe(etl.map(async entry => {
-            //SEARCH FOLDERS
+        .on('entry', function (entry) {
+
             let folders = config.folders;
+            const main_folder = 'yapexil/'
 
             for (const x in folders){
                 let folder = folders[x];
                 let file = getFilesInfo(entry.path);
+                if (file.folder === folder.name){ //If FILE is in some FOLDERS
+                    if(file.name !== 'metadata.json'){
 
-                if ((file.fullPath).match(folder.yapexil)){ //If FILE is in some FOLDERS
-                    console.log(file);
+                        if(file.folder === "embeddables"){
+                            if(config.imageExtensions.includes(file.extension)){
+                                console.log(main_folder + folder.mef_img + file.name);
+                                //entry.pipe(fs.createWriteStream(main_folder + folder.mef_img + file.name));
+
+                            }
+                            else{
+                                console.log(main_folder + folder.mef_other + file.name);
+                                //entry.pipe(fs.createWriteStream(main_folder + folder.mef_other + file.name));
+
+                            }
+                        }
+                        else{
+                            const content =  entry.buffer();
+                            console.log(main_folder + folder.mef + file.name);
+
+                            //entry.pipe(
+                            //    fs.writeFile('test',content)
+                            //
+                            //entry.pipe(fs.createWriteStream(main_folder + folder.mef + file.name));
+                        }
+                    }
+
+                }
+                else{
+                }
+            }
+            entry.autodrain(); //Load next file
+
+        });
+        /*
+        .pipe(etl.map(async entry => {
+            //SEARCH FOLDERS
+            let folders = config.folders;
+            console.log(entry.path);
+
+            for (const x in folders){
+                let folder = folders[x];
+                let file = getFilesInfo(entry.path);
+                if (file.folder === folder.name){ //If FILE is in some FOLDERS
+                    if(file.name !== 'metadata.json'){
+
+                        if(file.folder === "embeddables"){
+                            console.log("EMB");
+                            if(file.extension.match(config.imageExtensions)){
+                                console.log(folder.mef_img + file.name);
+                            }
+                            else{
+                                console.log(folder.mef_other + file.name);
+
+                            }
+                        }
+                        //console.log(folder.mef + file.name);
+                    }
+
+                }
+                else{
                 }
             }
             /*
@@ -40,8 +95,10 @@ exports.yapexil2mefStream = async function (file) {
                 entry.autodrain();
             }
 
-             */
+
         }))
+
+         */
 }
 
 getFilesInfo = function (fileName){

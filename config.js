@@ -1,20 +1,32 @@
 let config = {};
 
 config.folders = [{
-    name:'solutions',
+    name:'embeddables',
     yapexil:'embeddables/',
-    mef: ''
-    },{
+    mef_img: 'images/',
+    mef_other: 'problemroot/'
+    },
+    {
     name:'statements',
     yapexil:'statements/',
     mef: ''
 },{
     name:'tests',
     yapexil:'tests/',
-    mef: ''
-}
+    mef: 'tests/'
+},
+    {
+        name:'solutions',
+        yapexil:'solutions/',
+        mef: 'solutions/'
+    },
+    {
+        name:'skeletons',
+        yapexil:'skeletons/',
+        mef: 'skeletons/'
+    }
 ];
 
-
+config.imageExtensions = 'jpg bmp jpeg tif png';
 
 module.exports = config;
