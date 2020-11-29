@@ -2,103 +2,97 @@ const unzipper = require("unzipper");
 const fs = require("fs");
 
 let config = require('./config');
+let builder = require('xmlbuilder');
 
-exports.yapexil2mef = function(path) {
+exports.yapexil2mef = function(path, debug=false) {
     let file = fs.createReadStream(path);
-    this.yapexil2mefStream(file);
+    this.yapexil2mefStream(file,debug);
 }
-//TODO Write on file!!
-exports.yapexil2mefStream = async function (file) {
+
+exports.yapexil2mefStream = async function (file, debug=false) {
+    let metadata_flag = false; //Search for metadata.json file
+    const main_folder = 'mef/';
+    let folders = config.folders;
+    let informations = config.temp_info; //Used to store temp informations to compose Content.xml
+
+    if(debug)
+        console.log("START UNZIPPING ...");
+
     file
         .pipe(unzipper.Parse())
-        .on('entry', function (entry) {
+        .on('entry', async function (entry) {
 
-            let folders = config.folders;
-            const main_folder = 'yapexil/'
+            const data_raw = await entry.buffer();
+            let file = await getFilesInfo(entry.path);
 
             for (const x in folders){
                 let folder = folders[x];
-                let file = getFilesInfo(entry.path);
                 if (file.folder === folder.name){ //If FILE is in some FOLDERS
                     if(file.name !== 'metadata.json'){
 
+                        //Search for EMBEDDABLES folder
                         if(file.folder === "embeddables"){
                             if(config.imageExtensions.includes(file.extension)){
-                                console.log(main_folder + folder.mef_img + file.name);
-                                //entry.pipe(fs.createWriteStream(main_folder + folder.mef_img + file.name));
+                                 fs.mkdir(main_folder + folder.mef_img, { recursive: true }, (err) => {
+                                    if (err) throw err;
+                                });
+                                 entry.pipe(fs.createWriteStream(main_folder + folder.mef_img + file.name))
+                                     .on('finish', function () {
+                                         informations['images'].push(file.name);
+                                         if(debug)
+                                             console.log(main_folder + folder.mef_img + file.name);
+                                     });
 
                             }
                             else{
-                                console.log(main_folder + folder.mef_other + file.name);
-                                //entry.pipe(fs.createWriteStream(main_folder + folder.mef_other + file.name));
+                                fs.mkdir(main_folder + folder.mef_other, { recursive: true }, (err) => {
+                                    if (err) throw err;
+                                });
+                                entry.pipe(fs.createWriteStream(main_folder + folder.mef_other + file.name));
+                                informations['problem_root'].push(file.name);
 
-                            }
+                                if(debug)
+                                    console.log(main_folder + folder.mef_other + file.name);
+                                }
                         }
                         else{
-                            const content =  entry.buffer();
-                            console.log(main_folder + folder.mef + file.name);
+                            //Save STATEMENT file's path
+                            if(config.statementExtensions.includes(file.extension))
+                                informations['statement'] = file.name;
+                            else
+                                informations[file.folder].push(file.name);
 
-                            //entry.pipe(
-                            //    fs.writeFile('test',content)
-                            //
-                            //entry.pipe(fs.createWriteStream(main_folder + folder.mef + file.name));
-                        }
+                            fs.mkdir(main_folder + folder.mef, { recursive: true }, (err) => {
+                                if (err) throw err;
+                            });
+                            entry.pipe(fs.createWriteStream(main_folder + folder.mef + file.name));
+
+                            if(debug)
+                                console.log(main_folder + folder.mef + file.name);
+                            }
                     }
 
                 }
-                else{
-                }
+
             }
+            //Search for METADATA.JSON
+            if(file.folder === 'metadata.json' && file.name === 'metadata.json'){
+                metadata_flag = true;
+                informations['metadata'] = JSON.parse(data_raw.toString()); //Save METADATA
+
+                if(debug)
+                    console.log(main_folder + file.name);
+            }
+
             entry.autodrain(); //Load next file
 
-        });
-        /*
-        .pipe(etl.map(async entry => {
-            //SEARCH FOLDERS
-            let folders = config.folders;
-            console.log(entry.path);
+        }).on('finish',async function (finish){
+        if(metadata_flag)
+            console.log(informations);
+        else
+            console.error("No metadata.json file found!");
+    });
 
-            for (const x in folders){
-                let folder = folders[x];
-                let file = getFilesInfo(entry.path);
-                if (file.folder === folder.name){ //If FILE is in some FOLDERS
-                    if(file.name !== 'metadata.json'){
-
-                        if(file.folder === "embeddables"){
-                            console.log("EMB");
-                            if(file.extension.match(config.imageExtensions)){
-                                console.log(folder.mef_img + file.name);
-                            }
-                            else{
-                                console.log(folder.mef_other + file.name);
-
-                            }
-                        }
-                        //console.log(folder.mef + file.name);
-                    }
-
-                }
-                else{
-                }
-            }
-            /*
-            if (entry.path === "metadata.json") {
-                const content = await entry.buffer();
-                let str = content.toString();
-                console.log(JSON.parse(str));
-
-
-
-                //await fs.writeFile('output/path',content); //Usare alla fine per scrivere il file MEF
-            }
-            else {
-                entry.autodrain();
-            }
-
-
-        }))
-
-         */
 }
 
 getFilesInfo = function (fileName){

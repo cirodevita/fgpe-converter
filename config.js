@@ -24,9 +24,26 @@ config.folders = [{
         name:'skeletons',
         yapexil:'skeletons/',
         mef: 'skeletons/'
-    }
+    },
+    {
+        name:'metadata.json',
+        yapexil:'metadata.json',
+        mef: 'metadata.json'
+    },
 ];
 
 config.imageExtensions = 'jpg bmp jpeg tif png';
+config.statementExtensions = 'html pdf doc';
+
+
+config.temp_info = {
+    metadata: "",
+    statement: "",
+    tests : [],
+    solutions:[],
+    skeletons: [],
+    images: [],
+    problem_root:[]
+}
 
 module.exports = config;
