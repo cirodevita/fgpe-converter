@@ -15,6 +15,7 @@ exports.yapexil2mefStream = async function (file, debug=false) {
     let folders = config.folders;
     let informations = config.temp_info; //Used to store temp informations to compose Content.xml
     let temp_test = config.temp_test;
+    let folderCount = 1;
 
     if(debug)
         console.log("START UNZIPPING ...");
@@ -70,50 +71,54 @@ exports.yapexil2mefStream = async function (file, debug=false) {
 
                                 await fs.mkdir(main_folder + folder.mef, { recursive: true }, async (err) => {
                                     if (err) throw err;
-                                    await fs.writeFile(main_folder + folder.mef + file.name,data_raw, function () {
-                                        if(file.extension !== undefined){
-                                            if(config.statementExtensions.includes(file.extension)) //SEARCH FOR HTML, PDF, DOCS  statements
-                                                informations['statement'] = file.name;
 
-                                            else if (file.folder === 'tests'){
+                                        if(file.extension !== undefined){
+
+                                            if(config.statementExtensions.includes(file.extension)) //SEARCH FOR HTML, PDF, DOCS  statements
+                                                await fs.writeFile(main_folder + folder.mef + file.name,data_raw, async function () {
+                                                    informations['statement'] = file.name;
+                                                });
+
+                                            else if (file.folder === 'tests'){ //SEARCH FOR TESTS FILES
                                                 console.log(file.nextfolder);
                                                 console.log(file.name);
-                                                //TODO CONTINUA QUI ...
-                                                let x;
+                                                if(temp_test[file.nextfolder] === undefined){
+                                                    temp_test[file.nextfolder] = {
+                                                        name: 'T' + folderCount.toString(),
+                                                        in: '',
+                                                        out: '',
+                                                        folder: 'T' + folderCount.toString() +'/'
+                                                    }
+                                                    folderCount ++;
+                                                }
 
                                                 if(file.name.includes('in'))
-                                                    if(temp_test[file.nextfolder]['out'] !== undefined )
-                                                        x = {in: file.name, out: temp_test[file.nextfolder]['out']};
-                                                    else
-                                                        x = {in: file.name, out: ''};
+                                                    temp_test[file.nextfolder].in = file.name;
                                                 else
-                                                    if(temp_test[file.nextfolder]['in'] !== undefined )
-                                                        x = {in: temp_test[file.nextfolder]['in'], out: file.name};
-                                                    else
-                                                        x = {in: '', out: file.name};
+                                                    temp_test[file.nextfolder].out = file.name;
 
-                                                temp_test[file.nextfolder] = x;
+                                                console.log(main_folder + folder.mef + temp_test[file.nextfolder].folder);
+                                                console.log(main_folder + folder.mef + temp_test[file.nextfolder].folder + file.name);
+                                                await fs.mkdir(main_folder + folder.mef + temp_test[file.nextfolder].folder, { recursive: true }, async (err) => {
+                                                    if (err) throw err;
+                                                    await fs.writeFile(main_folder + folder.mef + temp_test[file.nextfolder].folder + file.name,data_raw, function () {
 
-
-                                                if(file.folder !== undefined)
-                                                    informations[file.folder].push(file.name);
-
+                                                    })
+                                                });
                                             }
-                                            else{
+
+                                            else{ //SEARCH FOR OTHER FILES
                                                 if(file.folder !== undefined)
-                                                    informations[file.folder].push(file.name);
+                                                    await fs.writeFile(main_folder + folder.mef + file.name,data_raw, async function () {
+                                                        informations[file.folder].push(file.name);
+                                                    });
                                             }
 
 
                                             if(debug)
                                                 console.log(main_folder + folder.mef + file.name);
                                         }
-
-
-
                                     });
-
-                                });
 
                             }
                         }
@@ -135,9 +140,14 @@ exports.yapexil2mefStream = async function (file, debug=false) {
             }
         })
         .on('finish',async function (finish){
-            console.log(finish);
-            if(metadata_flag)
-                console.log(temp_test);
+            if(metadata_flag){
+                //informations['tests'].push(Object.values(temp_test).in);
+                informations['tests'] = normalizeTests(temp_test);
+                //console.log(informations['tests'][0].name);
+
+                console.log(informations);
+            }
+
             else
                 console.error("No metadata.json file found!");
         });
@@ -149,8 +159,7 @@ getFilesInfo = function (fileName){
 
     let temp_name = fileName.split("/");
     let name = temp_name[temp_name.length-1];
-    //console.log(name);
-    //console.log(temp_name[0]);
+
 
     return {
         name: name,
@@ -159,5 +168,12 @@ getFilesInfo = function (fileName){
         nextfolder: temp_name[1],
         fullPath: fileName
     }
+}
 
+normalizeTests = function (test) {
+    let r = [];
+    for (let key in test)
+        r.push(test[key])
+
+    return r;
 }
