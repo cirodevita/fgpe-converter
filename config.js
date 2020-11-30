@@ -34,6 +34,8 @@ config.folders = [{
 
 config.imageExtensions = 'jpg bmp jpeg tif png';
 config.statementExtensions = 'html pdf doc';
+config.ignoreFiles = ['__MACOSX', '.DS_Store'];
+
 
 
 config.temp_info = {
@@ -44,6 +46,9 @@ config.temp_info = {
     skeletons: [],
     images: [],
     problem_root:[]
+}
+config.temp_test = {
+
 }
 
 module.exports = config;
